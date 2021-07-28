@@ -12,7 +12,7 @@ fn print_files(files: &[&String]) -> bool {
         let mut stdout = File::from_raw_fd(1);
         for file in files {
             if *file == &String::from("-") {
-                ok = print_stdin();
+                ok = print_stdin(&mut stdout);
                 continue;
             }
 
@@ -43,18 +43,19 @@ fn print_files(files: &[&String]) -> bool {
     ok
 }
 
-fn print_stdin() -> bool {
+fn print_stdin(stdout: &mut File) -> bool {
     let stdin = std::io::stdin();
     let mut stdin_lock = stdin.lock();
     let mut line = String::new();
+    let mut ok = true;
 
     loop {
         if let Ok(bytes) = stdin_lock.read_line(&mut line) {
             if bytes == 0 {
-                return true;
+                return ok;
             }
 
-            print!("{}", line);
+            ok &= stdout.write_all(line.as_bytes()).is_ok();
             line = String::from("");
         } else {
             return false;
@@ -93,7 +94,7 @@ fn main() {
 
     let mut errors = false;
     if files.is_empty() {
-        errors = !print_stdin();
+        errors = !print_files(&vec![&String::from("-")]);
     } else {
         errors = !print_files(&files);
     }
