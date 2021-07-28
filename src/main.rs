@@ -57,13 +57,33 @@ fn print_stdin() -> bool {
     }
 }
 
+fn print_help() {
+    println!("Usage: rat [OPTION]... [FILE]...");
+    println!("Concatenate FILE(s) to standard output.");
+    println!();
+    println!("With no FILE, or when FILE is -, read standard input.");
+    println!();
+    println!("-u     ignored");
+    println!("--help display this help and exit");
+    println!("Examples:");
+    println!();
+    println!("cat f g  Output f's contents, then g's contents.");
+    println!("cat      Copy standard input to standard output.");
+}
+
 #[allow(unused_assignments)]
 fn main() {
-    let no_buffering_option: String = String::from("-u");
+    let options_to_remove = vec![String::from("-"), String::from("--help")];
     let args: Vec<String> = env::args().collect::<Vec<String>>()[1..].to_vec();
+
+    if args.contains(&String::from("--help")) {
+        print_help();
+        std::process::exit(0)
+    }
+
     let files: Vec<&String> = args
         .iter()
-        .filter(|arg| *arg != &no_buffering_option)
+        .filter(|arg| !options_to_remove.contains(*arg))
         .collect(); // remove -u
 
     let mut errors = false;
