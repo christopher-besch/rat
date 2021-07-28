@@ -73,7 +73,7 @@ fn print_help() {
 
 #[allow(unused_assignments)]
 fn main() {
-    let options_to_remove = vec![String::from("-"), String::from("--help")];
+    let options_to_remove = vec![String::from("-u"), String::from("--help")];
     let args: Vec<String> = env::args().collect::<Vec<String>>()[1..].to_vec();
 
     if args.contains(&String::from("--help")) {
@@ -87,7 +87,7 @@ fn main() {
         .collect(); // remove -u
 
     let mut errors = false;
-    if files.is_empty() || files[0] == &String::from("-") {
+    if files.is_empty() {
         errors = !print_stdin();
     } else {
         errors = !print_files(&files);
