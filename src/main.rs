@@ -1,13 +1,12 @@
 use std::env;
-use std::path::Path;
 use std::fs;
 use std::fs::File;
-use std::io::Write;
+use std::io::{BufRead, Write};
 use std::os::unix::io::FromRawFd;
-
+use std::path::Path;
 
 fn print_files(files: &Vec<&String>) -> bool {
-    let mut errors: bool = false;
+    let mut ok: bool = true;
 
     unsafe {
         let mut stdout = File::from_raw_fd(1);
@@ -16,42 +15,63 @@ fn print_files(files: &Vec<&String>) -> bool {
 
             if !path.exists() {
                 eprintln!("rat: {}: No such file or directory", file);
-                errors = true;
+                ok = false;
                 continue;
             }
 
             if path.is_dir() {
                 eprintln!("rat: {}: Is a directory", file);
-                errors = true;
+                ok = false;
                 continue;
             }
 
             if let Ok(data) = fs::read(file) {
                 if let Err(_) = stdout.write_all(&data) {
-                    errors = true;
+                    ok = false;
                 }
             } else {
-                errors = true;
+                ok = false;
             }
         }
     }
 
-    errors
+    ok
+}
+
+fn print_stdin() -> bool {
+    let stdin = std::io::stdin();
+    let mut stdin_lock = stdin.lock();
+    let mut line = String::new();
+
+    loop {
+        if let Ok(bytes) = stdin_lock.read_line(&mut line) {
+            if bytes == 0 {
+                return true;
+            }
+
+            print!("{}", line);
+            line = String::from("");
+        } else {
+            return false;
+        }
+    }
 }
 
 fn main() {
     let no_buffering_option: String = String::from("-u");
     let args: Vec<String> = env::args().collect::<Vec<String>>()[1..].to_vec();
-    // remove -u option
-    let files: Vec<&String> = args.iter().filter(|arg| *arg != &no_buffering_option).collect();
+    let files: Vec<&String> = args
+        .iter()
+        .filter(|arg| *arg != &no_buffering_option)
+        .collect(); // remove -u
+
     let mut errors = false;
-    
-    // if files.is_empty() || files[0] == &String::from("-") {
-    //     errors = read_stdin();
-    // } else {
-        errors = print_files(&files);
-    // }
-    
+    if files.is_empty() || files[0] == &String::from("-") {
+        errors = !print_stdin();
+    } else {
+        errors = !print_files(&files);
+    }
+
     if errors {
         std::process::exit(1)
     }
