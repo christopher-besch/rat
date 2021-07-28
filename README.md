@@ -7,7 +7,7 @@ Posix compliant cat implementation in Rust.
 rat file1 file2 file3...
 ```
 
-## Instalation
+## Installation
 ```
 git clone https://github.com/adamjedrzejewski/rat.git
 cargo install --path rat
