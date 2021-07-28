@@ -1,14 +1,14 @@
 use std::env;
 use std::path::Path;
 use std::fs;
-use std::io::{self, Write};
+use std::fs::File;
+use std::io::Write;
+use std::os::unix::io::FromRawFd;
 
-
-fn print_file_contents(filename: &String) {
+#[allow(unused_must_use)]
+fn print_file_contents(filename: &String, stdout: &mut File) {
     if let Ok(data) = fs::read(filename) {
-        io::stdout().write_all(&data);
-    } else {
-
+        stdout.write_all(&data);
     }
 }
 
@@ -18,18 +18,21 @@ fn main() {
     // remove -u option
     let files: Vec<&String> = args.iter().filter(|arg| *arg != &no_buffering_option).collect();
     
-    for file in files {
-        let path = Path::new(file);
+    unsafe {
+        let mut stdout = File::from_raw_fd(1);
+        for file in files {
+            let path = Path::new(file);
 
-        if !path.exists() {
-            eprintln!("rat: {}: No such file or directory", file);
-            continue;
-        }
-        if path.is_dir() {
-            eprintln!("rat: {}: Is a directory", file);
-            continue;
-        }
+            if !path.exists() {
+                eprintln!("rat: {}: No such file or directory", file);
+                continue;
+            }
+            if path.is_dir() {
+                eprintln!("rat: {}: Is a directory", file);
+                continue;
+            }
 
-        print_file_contents(file);
+            print_file_contents(file, &mut stdout);
+        }
     }
 }
