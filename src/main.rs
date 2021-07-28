@@ -89,7 +89,7 @@ fn main() {
     let files: Vec<&String> = args
         .iter()
         .filter(|arg| !options_to_remove.contains(*arg))
-        .collect(); // remove -u
+        .collect();
 
     let mut errors = false;
     if files.is_empty() {
