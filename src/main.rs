@@ -11,6 +11,11 @@ fn print_files(files: &[&String]) -> bool {
     unsafe {
         let mut stdout = File::from_raw_fd(1);
         for file in files {
+            if *file == &String::from("-") {
+                ok = print_stdin();
+                continue;
+            }
+
             let path = Path::new(file);
 
             if !path.exists() {
