@@ -5,7 +5,7 @@ use std::io::{BufRead, Write};
 use std::os::unix::io::FromRawFd;
 use std::path::Path;
 
-fn print_files(files: &Vec<&String>) -> bool {
+fn print_files(files: &[&String]) -> bool {
     let mut ok: bool = true;
 
     unsafe {
@@ -26,7 +26,7 @@ fn print_files(files: &Vec<&String>) -> bool {
             }
 
             if let Ok(data) = fs::read(file) {
-                if let Err(_) = stdout.write_all(&data) {
+                if stdout.write_all(&data).is_err() {
                     ok = false;
                 }
             } else {
@@ -57,6 +57,7 @@ fn print_stdin() -> bool {
     }
 }
 
+#[allow(unused_assignments)]
 fn main() {
     let no_buffering_option: String = String::from("-u");
     let args: Vec<String> = env::args().collect::<Vec<String>>()[1..].to_vec();
