@@ -1,9 +1,10 @@
 use std::env;
-use std::fs;
 use std::fs::File;
-use std::io::{BufRead, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::os::unix::io::FromRawFd;
 use std::path::Path;
+
+const BUFFER_CAP: usize = 1024 * 128;
 
 fn print_files(files: &[&String]) -> bool {
     let mut ok: bool = true;
@@ -30,17 +31,42 @@ fn print_files(files: &[&String]) -> bool {
                 continue;
             }
 
-            if let Ok(data) = fs::read(file) {
-                if stdout.write_all(&data).is_err() {
-                    ok = false;
-                }
+            if let Ok(file) = File::open(file) {
+                ok = print_file(&file, &mut stdout);
             } else {
                 ok = false;
             }
+            // if let Ok(data) = fs::read(file) {
+            //     if stdout.write_all(&data).is_err() {
+            //         ok = false;
+            //     }
+            // } else {
+            //     ok = false;
+            // }
         }
     }
 
     ok
+}
+
+fn print_file(file: &File, stdout: &mut File) -> bool {
+    let mut reader = BufReader::with_capacity(BUFFER_CAP, file);
+    loop {
+        let length = if let Ok(buffer) = reader.fill_buf() {
+            stdout.write_all(buffer);
+            buffer.len()
+        } else {
+            return false;
+        };
+
+        if length == 0 {
+            break;
+        }
+        
+        reader.consume(length);
+    }
+
+    true
 }
 
 fn print_stdin(stdout: &mut File) -> bool {
