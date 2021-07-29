@@ -1,19 +1,18 @@
 use std::env;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Error, Result, Write};
 use std::os::unix::io::FromRawFd;
 use std::path::Path;
 
 const BUFFER_CAP: usize = 1024 * 128;
 
-fn print_files(files: &[&String]) -> bool {
-    let mut ok: bool = true;
-
+fn print_files(files: &[&String]) -> Result<()> {
+    let mut ok = true;
     unsafe {
         let mut stdout = File::from_raw_fd(1);
         for file in files {
             if *file == &String::from("-") {
-                ok = print_stdin(&mut stdout);
+                ok = print_stdin(&mut stdout).is_ok();
                 continue;
             }
 
@@ -32,61 +31,55 @@ fn print_files(files: &[&String]) -> bool {
             }
 
             if let Ok(file) = File::open(file) {
-                ok = print_file(&file, &mut stdout);
+                print_file(&file, &mut stdout)?;
             } else {
-                ok = false;
+                false;
             }
-            // if let Ok(data) = fs::read(file) {
-            //     if stdout.write_all(&data).is_err() {
-            //         ok = false;
-            //     }
-            // } else {
-            //     ok = false;
-            // }
         }
     }
 
-    ok
+    if ok {
+        Ok(())
+    } else {
+        Err(Error::last_os_error())
+    }
 }
 
-fn print_file(file: &File, stdout: &mut File) -> bool {
+fn print_file(file: &File, stdout: &mut File) -> Result<()> {
     let mut reader = BufReader::with_capacity(BUFFER_CAP, file);
     loop {
-        let length = if let Ok(buffer) = reader.fill_buf() {
-            stdout.write_all(buffer);
+        let length = {
+            let buffer = reader.fill_buf()?;
+            stdout.write_all(buffer)?;
             buffer.len()
-        } else {
-            return false;
         };
 
         if length == 0 {
             break;
         }
-        
+
         reader.consume(length);
     }
 
-    true
+    Ok(())
 }
 
-fn print_stdin(stdout: &mut File) -> bool {
+fn print_stdin(stdout: &mut File) -> Result<()> {
     let stdin = std::io::stdin();
     let mut stdin_lock = stdin.lock();
     let mut line = String::new();
-    let mut ok = true;
 
     loop {
-        if let Ok(bytes) = stdin_lock.read_line(&mut line) {
-            if bytes == 0 {
-                return ok;
-            }
-
-            ok &= stdout.write_all(line.as_bytes()).is_ok();
-            line = String::from("");
-        } else {
-            return false;
+        let bytes = stdin_lock.read_line(&mut line)?;
+        if bytes == 0 {
+            break;
         }
+
+        stdout.write_all(line.as_bytes())?;
+        line = String::from("");
     }
+
+    Ok(())
 }
 
 fn print_help() {
@@ -120,9 +113,9 @@ fn main() {
 
     let mut errors = false;
     if files.is_empty() {
-        errors = !print_files(&vec![&String::from("-")]);
+        errors = print_files(&vec![&String::from("-")]).is_err();
     } else {
-        errors = !print_files(&files);
+        errors = print_files(&files).is_err();
     }
 
     if errors {
