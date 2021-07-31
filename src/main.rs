@@ -99,7 +99,7 @@ fn print_help() {
 #[allow(unused_assignments)]
 fn main() {
     let options_to_remove = vec![String::from("-u"), String::from("--help")];
-    let args: Vec<String> = env::args().collect::<Vec<String>>()[1..].to_vec();
+    let args: Vec<String> = env::args().skip(1).collect();
 
     if args.contains(&String::from("--help")) {
         print_help();
