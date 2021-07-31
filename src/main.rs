@@ -34,7 +34,7 @@ fn print_files(files: &[&String]) -> bool {
         }
     }
 
-  ok
+    ok
 }
 
 fn print_file(file: &File) -> Result<()> {
