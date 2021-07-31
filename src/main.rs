@@ -1,40 +1,36 @@
 use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Error, Result, Write};
-use std::os::unix::io::FromRawFd;
 use std::path::Path;
 
 const BUFFER_CAP: usize = 1024 * 128;
 
 fn print_files(files: &[&String]) -> Result<()> {
     let mut ok = true;
-    unsafe {
-        let mut stdout = File::from_raw_fd(1);
-        for file in files {
-            if *file == &String::from("-") {
-                ok = print_stdin(&mut stdout).is_ok();
-                continue;
-            }
+    for file in files {
+        if *file == &String::from("-") {
+            ok = print_stdin().is_ok();
+            continue;
+        }
 
-            let path = Path::new(file);
+        let path = Path::new(file);
 
-            if !path.exists() {
-                eprintln!("rat: {}: No such file or directory", file);
-                ok = false;
-                continue;
-            }
+        if !path.exists() {
+            eprintln!("rat: {}: No such file or directory", file);
+            ok = false;
+            continue;
+        }
 
-            if path.is_dir() {
-                eprintln!("rat: {}: Is a directory", file);
-                ok = false;
-                continue;
-            }
+        if path.is_dir() {
+            eprintln!("rat: {}: Is a directory", file);
+            ok = false;
+            continue;
+        }
 
-            if let Ok(file) = File::open(file) {
-                print_file(&file, &mut stdout)?;
-            } else {
-                false;
-            }
+        if let Ok(file) = File::open(file) {
+            print_file(&file)?;
+        } else {
+            false;
         }
     }
 
@@ -45,12 +41,15 @@ fn print_files(files: &[&String]) -> Result<()> {
     }
 }
 
-fn print_file(file: &File, stdout: &mut File) -> Result<()> {
+fn print_file(file: &File) -> Result<()> {
+    let stdout = std::io::stdout();
+    
+    let mut stdout_lock = stdout.lock();
     let mut reader = BufReader::with_capacity(BUFFER_CAP, file);
     loop {
         let length = {
             let buffer = reader.fill_buf()?;
-            stdout.write_all(buffer)?;
+            stdout_lock.write_all(buffer)?;
             buffer.len()
         };
 
@@ -64,8 +63,11 @@ fn print_file(file: &File, stdout: &mut File) -> Result<()> {
     Ok(())
 }
 
-fn print_stdin(stdout: &mut File) -> Result<()> {
+fn print_stdin() -> Result<()> {
     let stdin = std::io::stdin();
+    let stdout = std::io::stdout();
+
+    let mut stdout_lock = stdout.lock();
     let mut stdin_lock = stdin.lock();
     let mut line = String::new();
 
@@ -75,7 +77,7 @@ fn print_stdin(stdout: &mut File) -> Result<()> {
             break;
         }
 
-        stdout.write_all(line.as_bytes())?;
+        stdout_lock.write_all(line.as_bytes())?;
         line = String::from("");
     }
 
