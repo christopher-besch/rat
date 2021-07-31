@@ -1,11 +1,11 @@
 use std::env;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Error, Result, Write};
+use std::io::{BufRead, BufReader, Result, Write};
 use std::path::Path;
 
 const BUFFER_CAP: usize = 1024 * 128;
 
-fn print_files(files: &[&String]) -> Result<()> {
+fn print_files(files: &[&String]) -> bool {
     let mut ok = true;
     for file in files {
         if *file == &String::from("-") {
@@ -28,22 +28,18 @@ fn print_files(files: &[&String]) -> Result<()> {
         }
 
         if let Ok(file) = File::open(file) {
-            print_file(&file)?;
+            ok &= print_file(&file).is_ok();
         } else {
             false;
         }
     }
 
-    if ok {
-        Ok(())
-    } else {
-        Err(Error::last_os_error())
-    }
+  ok
 }
 
 fn print_file(file: &File) -> Result<()> {
     let stdout = std::io::stdout();
-    
+
     let mut stdout_lock = stdout.lock();
     let mut reader = BufReader::with_capacity(BUFFER_CAP, file);
     loop {
@@ -115,9 +111,9 @@ fn main() {
 
     let mut errors = false;
     if files.is_empty() {
-        errors = print_files(&vec![&String::from("-")]).is_err();
+        errors = !print_files(&vec![&String::from("-")]);
     } else {
-        errors = print_files(&files).is_err();
+        errors = !print_files(&files);
     }
 
     if errors {
